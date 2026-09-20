@@ -7,9 +7,11 @@ import TopAgents from '../libs/components/homepage/TopAgents';
 import Events from '../libs/components/homepage/Events';
 import TrendProperties from '../libs/components/homepage/TrendProperties';
 import TopProperties from '../libs/components/homepage/TopProperties';
-import { Stack } from '@mui/material';
+import { Container, Stack } from '@mui/material';
 import Advertisement from '../libs/components/homepage/Advertisement';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useReactiveVar } from '@apollo/client';
+import { groupVar } from '../apollo/store';
 
 export const getStaticProps = async ({ locale }: any) => ({
 	props: {
@@ -19,6 +21,7 @@ export const getStaticProps = async ({ locale }: any) => ({
 
 const Home: NextPage = () => {
 	const device = useDeviceDetect();
+	const group = useReactiveVar(groupVar);
 
 	if (device === 'mobile') {
 		return (
@@ -33,6 +36,7 @@ const Home: NextPage = () => {
 	} else {
 		return (
 			<Stack className={'home-page'}>
+				<Container>HELLO: {group}</Container>
 				<TrendProperties />
 				<PopularProperties />
 				<Advertisement />

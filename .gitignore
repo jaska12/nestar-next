@@ -44,3 +44,10 @@ next-env.d.ts
 .env.development
 .env.local
 .env
+
+# material & uploads
+material (2).zip
+material/
+public/uploads/
+__MACOSX/
+
