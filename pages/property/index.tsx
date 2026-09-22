@@ -69,8 +69,8 @@ const PropertyList: NextPage = ({ initialInput, ...props }: any) => {
 	}, [router]);
 
 	useEffect(() => {
-		console.log('+++', searchFilter);
-		getPropertiesRefetch({ input: searchFilter });
+		console.log('searchFilter:', searchFilter);
+		getPropertiesRefetch({ input: searchFilter }).then();
 	}, [searchFilter]);
 
 	/** HANDLERS **/
