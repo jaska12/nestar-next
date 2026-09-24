@@ -8,6 +8,9 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { T } from '../../types/common';
 import '@toast-ui/editor/dist/toastui-editor.css';
+import { useMutation } from '@apollo/client';
+import { CREATE_BOARD_ARTICLE } from '../../../apollo/user/mutation';
+import { sweetErrorHandling, sweetTopSmallSuccessAlert } from '../../sweetAlert';
 
 const TuiEditor = () => {
 	const editorRef = useRef<Editor>(null),
@@ -16,6 +19,7 @@ const TuiEditor = () => {
 	const [articleCategory, setArticleCategory] = useState<BoardArticleCategory>(BoardArticleCategory.FREE);
 
 	/** APOLLO REQUESTS **/
+	const [createBoardArticle] = useMutation(CREATE_BOARD_ARTICLE);
 
 	const memoizedValues = useMemo(() => {
 		const articleTitle = '',
@@ -76,7 +80,28 @@ const TuiEditor = () => {
 		memoizedValues.articleTitle = e.target.value;
 	};
 
-	const handleRegisterButton = async () => {};
+	const handleRegisterButton = async () => {
+		try {
+			const { articleTitle, articleContent, articleImage } = memoizedValues;
+			if (!articleTitle || !articleContent) return;
+
+			await createBoardArticle({
+				variables: {
+					input: {
+						articleCategory,
+						articleTitle,
+						articleContent,
+						articleImage,
+					},
+				},
+			});
+			await sweetTopSmallSuccessAlert('Article created successfully!', 700);
+			router.push('/community');
+		} catch (err: any) {
+			console.log('ERROR, handleRegisterButton:', err.message);
+			sweetErrorHandling(err).then();
+		}
+	};
 
 	const doDisabledCheck = () => {
 		if (memoizedValues.articleContent === '' || memoizedValues.articleTitle === '') {
@@ -141,7 +166,10 @@ const TuiEditor = () => {
 					},
 				}}
 				events={{
-					load: function (param: any) {},
+					load: function (param: any) { },
+					change: function () {
+						memoizedValues.articleContent = editorRef.current?.getInstance().getMarkdown() ?? '';
+					},
 				}}
 			/>
 
