@@ -5,7 +5,7 @@ import useDeviceDetect from '../../libs/hooks/useDeviceDetect';
 import withLayoutBasic from '../../libs/components/layout/LayoutBasic';
 import { Button, Stack, Typography, Tab, Tabs, IconButton, Backdrop, Pagination } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import { useReactiveVar } from '@apollo/client';
+import { useMutation, useQuery, useReactiveVar } from '@apollo/client';
 import Moment from 'react-moment';
 import { userVar } from '../../apollo/store';
 import ThumbUpOffAltIcon from '@mui/icons-material/ThumbUpOffAlt';
@@ -16,11 +16,16 @@ import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineR
 import { CommentsInquiry } from '../../libs/types/comment/comment.input';
 import { Comment } from '../../libs/types/comment/comment';
 import dynamic from 'next/dynamic';
-import { CommentStatus } from '../../libs/enums/comment.enum';
+import { CommentGroup, CommentStatus } from '../../libs/enums/comment.enum';
 import { T } from '../../libs/types/common';
 import EditIcon from '@mui/icons-material/Edit';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { BoardArticle } from '../../libs/types/board-article/board-article';
+import { CREATE_COMMENT, LIKE_TARGET_BOARD_ARTICLE, UPDATE_COMMENT } from '../../apollo/user/mutation';
+import { GET_BOARD_ARTICLE, GET_COMMENTS } from '../../apollo/user/query';
+import { Messages, REACT_APP_API_URL } from '../../libs/config';
+import { sweetErrorHandling, sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from '../../libs/sweetAlert';
+
 const ToastViewerComponent = dynamic(() => import('../../libs/components/community/TViewer'), { ssr: false });
 
 export const getStaticProps = async ({ locale }: any) => ({
@@ -57,6 +62,43 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 	const [boardArticle, setBoardArticle] = useState<BoardArticle>();
 
 	/** APOLLO REQUESTS **/
+	const [likeTargetBoardArticle] = useMutation(LIKE_TARGET_BOARD_ARTICLE);
+	const [createComment] = useMutation(CREATE_COMMENT);
+	const [updateComment] = useMutation(UPDATE_COMMENT);
+
+	const {
+		loading: boardArticleLoading,
+		data: boardArticleData,
+		error: boardArticleError,
+		refetch: boardArticleRefetch,
+	} = useQuery(GET_BOARD_ARTICLE, {
+		fetchPolicy: 'network-only',
+		variables: { input: articleId },
+		skip: !articleId,
+		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			setBoardArticle(data?.getBoardArticle);
+			if (data?.getBoardArticle?.memberData?.memberImage) {
+				setMemberImage(`${REACT_APP_API_URL}/${data?.getBoardArticle?.memberData?.memberImage}`);
+			}
+		},
+	});
+
+	const {
+		loading: commentsLoading,
+		data: commentsData,
+		error: commentsError,
+		refetch: commentsRefetch,
+	} = useQuery(GET_COMMENTS, {
+		fetchPolicy: 'cache-and-network',
+		variables: { input: searchFilter },
+		skip: !searchFilter.search.commentRefId,
+		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			setComments(data?.getComments?.list);
+			setTotal(data?.getComments?.metaCounter[0]?.total ?? 0);
+		},
+	});
 
 	/** LIFECYCLES **/
 	useEffect(() => {
@@ -75,9 +117,76 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 		);
 	};
 
-	const creteCommentHandler = async () => {};
+	const likeArticleHandler = async (user: any, id: string) => {
+		try {
+			if (!id) return;
+			if (!user._id) throw new Error(Messages.error2);
 
-	const updateButtonHandler = async (commentId: string, commentStatus?: CommentStatus.DELETE) => {};
+			await likeTargetBoardArticle({
+				variables: {
+					input: id,
+				},
+			});
+			await boardArticleRefetch({ input: articleId });
+			await sweetTopSmallSuccessAlert('success', 800);
+		} catch (err: any) {
+			console.log('ERROR, likeArticleHandler:', err.message);
+			sweetMixinErrorAlert(err.message).then();
+		}
+	};
+
+	const creteCommentHandler = async () => {
+		if (!comment) return;
+		try {
+			if (!user._id) throw new Error(Messages.error2);
+			await createComment({
+				variables: {
+					input: {
+						commentGroup: CommentGroup.ARTICLE,
+						commentContent: comment,
+						commentRefId: articleId,
+					},
+				},
+			});
+			setComment('');
+			setWordsCnt(0);
+			await commentsRefetch({ input: searchFilter });
+		} catch (err: any) {
+			sweetErrorHandling(err).then();
+		}
+	};
+
+	const updateButtonHandler = async (commentId: string, commentStatus?: CommentStatus.DELETE) => {
+		try {
+			if (!user._id) throw new Error(Messages.error2);
+			if (commentStatus === CommentStatus.DELETE) {
+				await updateComment({
+					variables: {
+						input: {
+							_id: commentId,
+							commentStatus: CommentStatus.DELETE,
+						},
+					},
+				});
+			} else {
+				if (!updatedComment) return;
+				await updateComment({
+					variables: {
+						input: {
+							_id: commentId,
+							commentContent: updatedComment,
+						},
+					},
+				});
+			}
+			setOpenBackdrop(false);
+			setUpdatedComment('');
+			setUpdatedCommentWordsCnt(0);
+			await commentsRefetch({ input: searchFilter });
+		} catch (err: any) {
+			sweetErrorHandling(err).then();
+		}
+	};
 
 	const getCommentMemberImage = (imageUrl: string | undefined) => {
 		if (imageUrl) return `${process.env.REACT_APP_API_URL}/${imageUrl}`;
@@ -195,7 +304,15 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 										</Stack>
 										<Stack className="info">
 											<Stack className="icon-info">
-												{boardArticle?.meLiked ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
+												{boardArticle?.meLiked && boardArticle?.meLiked[0]?.myFavorite ? (
+													<ThumbUpAltIcon
+														onClick={() => boardArticle && likeArticleHandler(user, boardArticle?._id)}
+													/>
+												) : (
+													<ThumbUpOffAltIcon
+														onClick={() => boardArticle && likeArticleHandler(user, boardArticle?._id)}
+													/>
+												)}
 
 												<Typography className="text">{boardArticle?.articleLikes}</Typography>
 											</Stack>
@@ -221,8 +338,12 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 									</Stack>
 									<Stack className="like-and-dislike">
 										<Stack className="top">
-											<Button>
-												{boardArticle?.meLiked ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
+											<Button onClick={() => boardArticle && likeArticleHandler(user, boardArticle?._id)}>
+												{boardArticle?.meLiked && boardArticle?.meLiked[0]?.myFavorite ? (
+													<ThumbUpAltIcon />
+												) : (
+													<ThumbUpOffAltIcon />
+												)}
 												<Typography className="text">{boardArticle?.articleLikes}</Typography>
 											</Button>
 										</Stack>
