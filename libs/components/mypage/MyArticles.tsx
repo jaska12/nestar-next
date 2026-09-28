@@ -40,6 +40,16 @@ const MyArticles: NextPage = ({ initialInput, ...props }: T) => {
 		},
 	});
 
+	/** LIFECYCLES **/
+	React.useEffect(() => {
+		if (user?._id) {
+			setSearchCommunity((prev: any) => ({
+				...prev,
+				search: { memberId: user._id },
+			}));
+		}
+	}, [user._id]);
+
 	/** HANDLERS **/
 	const likeArticleHandler = async (e: any, user: any, id: string) => {
 		try {
