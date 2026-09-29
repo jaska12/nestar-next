@@ -89,12 +89,7 @@ const Chat = () => {
 			<Stack className={`chat-frame ${open ? 'open' : ''}`}>
 				<Box className={'chat-top'} component={'div'}>
 					<div style={{ fontFamily: 'Nunito' }}>Online Chat</div>
-					<RippleBadge
-						style={{
-							margin: '-30px 0 0 20px',
-						}}
-						badgeContent={onlineUsers}
-					/>
+					<RippleBadge style={{ margin: '-18px 0 0 21px' }} badgeContent={onlineUsers} />
 				</Box>
 				<Box className={'chat-content'} id="chat-content" ref={chatContentRef} component={'div'}>
 					<ScrollableFeed>
