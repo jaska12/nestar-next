@@ -4,7 +4,7 @@ import useDeviceDetect from '../../hooks/useDeviceDetect';
 import { Button, Stack, Typography } from '@mui/material';
 import axios from 'axios';
 import { REACT_APP_API_URL } from '../../config';
-import { getJwtToken, updateUserInfo } from '../../auth';
+import { getJwtToken, updateStorage, updateUserInfo } from '../../auth';
 import { useMutation, useReactiveVar } from '@apollo/client';
 import { userVar } from '../../../apollo/store';
 import { MemberUpdate } from '../../types/member/member.update';
@@ -91,7 +91,8 @@ const MyProfile: NextPage = ({ initialValues, ...props }: any) => {
 
 			// @ts-ignore
 			const jwtToken = result.data.updateMember?.accessToken;
-			await updateUserInfo(result.data.updateMember?.accessToken);
+			await updateStorage({ jwtToken });
+			updateUserInfo(result.data.updateMember?.accessToken);
 			await sweetMixinSuccessAlert('Information updated successfully.');
 		} catch (err: any) {
 			sweetErrorHandling(err).then();

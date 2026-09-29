@@ -12,19 +12,22 @@ import { userVar } from '../../../apollo/store';
 import { T } from '../../types/common';
 
 interface MemberFollowsProps {
-	initialInput: FollowInquiry;
-	subscribeHandler: any;
-	unsubscribeHandler: any;
-	redirectToMemberPageHandler: any;
+	initialInput?: FollowInquiry;
+	subscribeHandler?: any;
+	unsubscribeHandler?: any;
+	likeMemberHandler?: any;
+	redirectToMemberPageHandler?: any;
 }
 
 const MemberFollowers = (props: MemberFollowsProps) => {
-	const { initialInput, subscribeHandler, unsubscribeHandler, redirectToMemberPageHandler } = props;
+	const { initialInput, subscribeHandler, unsubscribeHandler, likeMemberHandler, redirectToMemberPageHandler } = props;
 	const device = useDeviceDetect();
 	const router = useRouter();
 	const [total, setTotal] = useState<number>(0);
 	const category: any = router.query?.category ?? 'properties';
-	const [followInquiry, setFollowInquiry] = useState<FollowInquiry>(initialInput);
+	const [followInquiry, setFollowInquiry] = useState<FollowInquiry>(
+		initialInput || { page: 1, limit: 5, search: { followingId: '' } },
+	);
 	const [memberFollowers, setMemberFollowers] = useState<Follower[]>([]);
 	const user = useReactiveVar(userVar);
 
@@ -37,7 +40,7 @@ const MemberFollowers = (props: MemberFollowsProps) => {
 		else setFollowInquiry({ ...followInquiry, search: { followingId: user?._id } });
 	}, [router]);
 
-	useEffect(() => {}, [followInquiry]);
+	useEffect(() => { }, [followInquiry]);
 
 	/** HANDLERS **/
 	const paginationHandler = async (event: ChangeEvent<unknown>, value: number) => {

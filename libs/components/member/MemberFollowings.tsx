@@ -11,19 +11,22 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { userVar } from '../../../apollo/store';
 
 interface MemberFollowingsProps {
-	initialInput: FollowInquiry;
-	subscribeHandler: any;
-	unsubscribeHandler: any;
-	redirectToMemberPageHandler: any;
+	initialInput?: FollowInquiry;
+	subscribeHandler?: any;
+	unsubscribeHandler?: any;
+	likeMemberHandler?: any;
+	redirectToMemberPageHandler?: any;
 }
 
 const MemberFollowings = (props: MemberFollowingsProps) => {
-	const { initialInput, subscribeHandler, unsubscribeHandler, redirectToMemberPageHandler } = props;
+	const { initialInput, subscribeHandler, unsubscribeHandler, likeMemberHandler, redirectToMemberPageHandler } = props;
 	const device = useDeviceDetect();
 	const router = useRouter();
 	const [total, setTotal] = useState<number>(0);
 	const category: any = router.query?.category ?? 'properties';
-	const [followInquiry, setFollowInquiry] = useState<FollowInquiry>(initialInput);
+	const [followInquiry, setFollowInquiry] = useState<FollowInquiry>(
+		initialInput || { page: 1, limit: 5, search: { followerId: '' } },
+	);
 	const [memberFollowings, setMemberFollowings] = useState<Following[]>([]);
 	const user = useReactiveVar(userVar);
 
@@ -36,7 +39,7 @@ const MemberFollowings = (props: MemberFollowingsProps) => {
 		else setFollowInquiry({ ...followInquiry, search: { followerId: user?._id } });
 	}, [router]);
 
-	useEffect(() => {}, [followInquiry]);
+	useEffect(() => { }, [followInquiry]);
 
 	/** HANDLERS **/
 	const paginationHandler = async (event: ChangeEvent<unknown>, value: number) => {

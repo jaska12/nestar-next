@@ -17,8 +17,13 @@ import { MemberStatus, MemberType } from '../../../libs/enums/member.enum';
 import { sweetErrorHandling } from '../../../libs/sweetAlert';
 import { MemberUpdate } from '../../../libs/types/member/member.update';
 
+import { useMutation, useQuery } from '@apollo/client';
+import { GET_ALL_MEMBERS_BY_ADMIN } from '../../../apollo/admin/query';
+import { UPDATE_MEMBER_BY_ADMIN } from '../../../apollo/admin/mutation';
+import { T } from '../../../libs/types/common';
+
 const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
-	const [anchorEl, setAnchorEl] = useState<[] | HTMLElement[]>([]);
+	const [anchorEl, setAnchorEl] = useState<any>({});
 	const [membersInquiry, setMembersInquiry] = useState<MembersInquiry>(initialInquiry);
 	const [members, setMembers] = useState<Member[]>([]);
 	const [membersTotal, setMembersTotal] = useState<number>(0);
@@ -29,9 +34,26 @@ const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
 	const [searchType, setSearchType] = useState('ALL');
 
 	/** APOLLO REQUESTS **/
+	const [updateMemberByAdmin] = useMutation(UPDATE_MEMBER_BY_ADMIN);
+
+	const {
+		loading: getAllMembersByAdminLoading,
+		data: getAllMembersByAdminData,
+		error: getAllMembersByAdminError,
+		refetch: getAllMembersByAdminRefetch,
+	} = useQuery(GET_ALL_MEMBERS_BY_ADMIN, {
+		fetchPolicy: 'network-only',
+		variables: { input: membersInquiry },
+		onCompleted: (data: T) => {
+			setMembers(data?.getAllMembersByAdmin?.list ?? []);
+			setMembersTotal(data?.getAllMembersByAdmin?.metaCounter[0]?.total ?? 0);
+		},
+	});
 
 	/** LIFECYCLES **/
-	useEffect(() => { }, [membersInquiry]);
+	useEffect(() => {
+		getAllMembersByAdminRefetch({ input: membersInquiry });
+	}, [membersInquiry]);
 
 	/** HANDLERS **/
 	const changePageHandler = async (event: unknown, newPage: number) => {
@@ -45,14 +67,12 @@ const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
 		setMembersInquiry({ ...membersInquiry });
 	};
 
-	const menuIconClickHandler = (e: any, index: number) => {
-		const tempAnchor = anchorEl.slice();
-		tempAnchor[index] = e.currentTarget;
-		setAnchorEl(tempAnchor);
+	const menuIconClickHandler = (e: any, index: any) => {
+		setAnchorEl({ ...anchorEl, [index]: e.currentTarget });
 	};
 
 	const menuIconCloseHandler = () => {
-		setAnchorEl([]);
+		setAnchorEl({});
 	};
 
 	const tabChangeHandler = async (event: any, newValue: string) => {
@@ -80,7 +100,13 @@ const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
 
 	const updateMemberHandler = async (updateData: MemberUpdate) => {
 		try {
+			await updateMemberByAdmin({
+				variables: {
+					input: updateData,
+				},
+			});
 			menuIconCloseHandler();
+			await getAllMembersByAdminRefetch({ input: membersInquiry });
 		} catch (err: any) {
 			sweetErrorHandling(err).then();
 		}
