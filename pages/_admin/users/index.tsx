@@ -44,6 +44,7 @@ const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
 	} = useQuery(GET_ALL_MEMBERS_BY_ADMIN, {
 		fetchPolicy: 'network-only',
 		variables: { input: membersInquiry },
+		notifyOnNetworkStatusChange: true,
 		onCompleted: (data: T) => {
 			setMembers(data?.getAllMembersByAdmin?.list ?? []);
 			setMembersTotal(data?.getAllMembersByAdmin?.metaCounter[0]?.total ?? 0);
@@ -52,18 +53,20 @@ const AdminUsers: NextPage = ({ initialInquiry, ...props }: any) => {
 
 	/** LIFECYCLES **/
 	useEffect(() => {
-		getAllMembersByAdminRefetch({ input: membersInquiry });
+		getAllMembersByAdminRefetch({ input: membersInquiry }).then();
 	}, [membersInquiry]);
 
 	/** HANDLERS **/
 	const changePageHandler = async (event: unknown, newPage: number) => {
 		membersInquiry.page = newPage + 1;
+		await getAllMembersByAdminRefetch({ input: membersInquiry });
 		setMembersInquiry({ ...membersInquiry });
 	};
 
 	const changeRowsPerPageHandler = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		membersInquiry.limit = parseInt(event.target.value, 10);
 		membersInquiry.page = 1;
+		await getAllMembersByAdminRefetch({ input: membersInquiry });
 		setMembersInquiry({ ...membersInquiry });
 	};
 
@@ -276,6 +279,7 @@ AdminUsers.defaultProps = {
 		page: 1,
 		limit: 10,
 		sort: 'createdAt',
+		direction: 'DESC',
 		search: {},
 	},
 };

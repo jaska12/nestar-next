@@ -42,6 +42,7 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 	} = useQuery(GET_ALL_PROPERTIES_BY_ADMIN, {
 		fetchPolicy: 'network-only',
 		variables: { input: propertiesInquiry },
+		notifyOnNetworkStatusChange: true,
 		onCompleted: (data: T) => {
 			setProperties(data?.getAllPropertiesByAdmin?.list ?? []);
 			setPropertiesTotal(data?.getAllPropertiesByAdmin?.metaCounter[0]?.total ?? 0);
@@ -50,18 +51,20 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 
 	/** LIFECYCLES **/
 	useEffect(() => {
-		getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
+		getAllPropertiesByAdminRefetch({ input: propertiesInquiry }).then();
 	}, [propertiesInquiry]);
 
 	/** HANDLERS **/
 	const changePageHandler = async (event: unknown, newPage: number) => {
 		propertiesInquiry.page = newPage + 1;
+		await getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
 		setPropertiesInquiry({ ...propertiesInquiry });
 	};
 
 	const changeRowsPerPageHandler = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		propertiesInquiry.limit = parseInt(event.target.value, 10);
 		propertiesInquiry.page = 1;
+		await getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
 		setPropertiesInquiry({ ...propertiesInquiry });
 	};
 
