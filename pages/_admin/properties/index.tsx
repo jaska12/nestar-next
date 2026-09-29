@@ -15,8 +15,13 @@ import { PropertyLocation, PropertyStatus } from '../../../libs/enums/property.e
 import { sweetConfirmAlert, sweetErrorHandling } from '../../../libs/sweetAlert';
 import { PropertyUpdate } from '../../../libs/types/property/property.update';
 
+import { useMutation, useQuery } from '@apollo/client';
+import { GET_ALL_PROPERTIES_BY_ADMIN } from '../../../apollo/admin/query';
+import { REMOVE_PROPERTY_BY_ADMIN, UPDATE_PROPERTY_BY_ADMIN } from '../../../apollo/admin/mutation';
+import { T } from '../../../libs/types/common';
+
 const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
-	const [anchorEl, setAnchorEl] = useState<[] | HTMLElement[]>([]);
+	const [anchorEl, setAnchorEl] = useState<any>({});
 	const [propertiesInquiry, setPropertiesInquiry] = useState<AllPropertiesInquiry>(initialInquiry);
 	const [properties, setProperties] = useState<Property[]>([]);
 	const [propertiesTotal, setPropertiesTotal] = useState<number>(0);
@@ -26,9 +31,27 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 	const [searchType, setSearchType] = useState('ALL');
 
 	/** APOLLO REQUESTS **/
+	const [updatePropertyByAdmin] = useMutation(UPDATE_PROPERTY_BY_ADMIN);
+	const [removePropertyByAdmin] = useMutation(REMOVE_PROPERTY_BY_ADMIN);
+
+	const {
+		loading: getAllPropertiesByAdminLoading,
+		data: getAllPropertiesByAdminData,
+		error: getAllPropertiesByAdminError,
+		refetch: getAllPropertiesByAdminRefetch,
+	} = useQuery(GET_ALL_PROPERTIES_BY_ADMIN, {
+		fetchPolicy: 'network-only',
+		variables: { input: propertiesInquiry },
+		onCompleted: (data: T) => {
+			setProperties(data?.getAllPropertiesByAdmin?.list ?? []);
+			setPropertiesTotal(data?.getAllPropertiesByAdmin?.metaCounter[0]?.total ?? 0);
+		},
+	});
 
 	/** LIFECYCLES **/
-	useEffect(() => { }, [propertiesInquiry]);
+	useEffect(() => {
+		getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
+	}, [propertiesInquiry]);
 
 	/** HANDLERS **/
 	const changePageHandler = async (event: unknown, newPage: number) => {
@@ -42,14 +65,12 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 		setPropertiesInquiry({ ...propertiesInquiry });
 	};
 
-	const menuIconClickHandler = (e: any, index: number) => {
-		const tempAnchor = anchorEl.slice();
-		tempAnchor[index] = e.currentTarget;
-		setAnchorEl(tempAnchor);
+	const menuIconClickHandler = (e: any, index: any) => {
+		setAnchorEl({ ...anchorEl, [index]: e.currentTarget });
 	};
 
 	const menuIconCloseHandler = () => {
-		setAnchorEl([]);
+		setAnchorEl({});
 	};
 
 	const tabChangeHandler = async (event: any, newValue: string) => {
@@ -77,6 +98,12 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 	const removePropertyHandler = async (id: string) => {
 		try {
 			if (await sweetConfirmAlert('Are you sure to remove?')) {
+				await removePropertyByAdmin({
+					variables: {
+						input: id,
+					},
+				});
+				await getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
 			}
 			menuIconCloseHandler();
 		} catch (err: any) {
@@ -110,7 +137,13 @@ const AdminProperties: NextPage = ({ initialInquiry, ...props }: any) => {
 	const updatePropertyHandler = async (updateData: PropertyUpdate) => {
 		try {
 			console.log('+updateData: ', updateData);
+			await updatePropertyByAdmin({
+				variables: {
+					input: updateData,
+				},
+			});
 			menuIconCloseHandler();
+			await getAllPropertiesByAdminRefetch({ input: propertiesInquiry });
 		} catch (err: any) {
 			menuIconCloseHandler();
 			sweetErrorHandling(err).then();
