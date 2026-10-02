@@ -26,3 +26,5 @@ export const userVar = makeVar<CustomJwtPayload>({
 
 export const groupVar = makeVar<string>('MIT-A4');
 
+export const socketVar = makeVar<any>(null);
+
